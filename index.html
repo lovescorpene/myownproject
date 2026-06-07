@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>💥 幻光猜数字 · 烟花破译版 | 几A几B经典</title>
+    <!-- canvas-confetti 轻量烟花库 → 炫酷炸裂效果 -->
+    <script src="
+https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #0a0f1e, #03050b);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', 'Segoe UI', 'Orbitron', 'Courier New', monospace;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* 动态光晕背景 */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            top: -25%;
+            left: -25%;
+            background: radial-gradient(ellipse at 40% 50%, rgba(0, 255, 255, 0.08), transparent 70%);
+            animation: aurora 12s infinite alternate;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes aurora {
+            0% {
+                opacity: 0.3;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0.8;
+                transform: translate(2%, 1%) scale(1.02);
+            }
+        }
+        /* 主游戏卡片 */
+        .game-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 700px;
+            background: rgba(12, 20, 30, 0.65);
+            backdrop-filter: blur(16px);
+            border-radius: 3rem;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 255, 255, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            padding: 1.8rem 2rem;
+            transition: all 0.3s ease;
+        }
+        /* 炫酷标题区 */
+        .cyber-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .glitch {
+            font-size: 2.6rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff, 0 0 15px #0ff, 0 0 30px #0f6eff;
+            animation: flicker 3s infinite;
+            background: linear-gradient(135deg, #aaffff, #2af);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: none;
+        }
+        @keyframes flicker {
+            0%, 100% { opacity: 1; text-shadow: 0 0 5px cyan; }
+            95% { opacity: 1; }
+            97% { opacity: 0.4; }
+            98% { opacity: 1; }
+        }
+        .subtitle {
+            color: #9cdbff;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            margin-top: 8px;
+            border-top: 1px dashed rgba(0, 255, 255, 0.5);
+            display: inline-block;
+            padding-top: 6px;
+            backdrop-filter: blur(4px);
+        }
+        .rule-badge {
+            background: rgba(0, 30, 40, 0.7);
+            border-radius: 2rem;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            text-align: center;
+            color: #bbf0ff;
+            width: fit-content;
+            margin: 12px auto 0 auto;
+            border: 0.5px solid cyan;
+            backdrop-filter: blur(4px);
+        }
+        /* 输入战斗区 */
+        .battle-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+        .guess-input {
+            flex: 3;
+            min-width: 180px;
+            background: #0a101ccc;
+            border: 2px solid #2affff;
+            border-radius: 3rem;
+            padding: 14px 20px;
+            font-size: 1.6rem;
+            font-weight: bold;
+            font-family: 'Orbitron', monospace;
+            text-align: center;
+            letter-spacing: 6px;
+            color: #0ff;
+            background: #010a14;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+        }
+        .guess-input:focus {
+            border-color: #f0f;
+            box-shadow: 0 0 18px #f0f, 0 0 6px cyan;
+            transform: scale(1.01);
+            background: #021220;
+            color: #fff0ff;
+        }
+        .btn-primary {
+            flex: 1;
+            background: linear-gradient(95deg, #0a1f2e, #003b5c);
+            border: none;
+            border-radius: 3rem;
+            padding: 12px 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            font-family: monospace;
+            color: #c0ffff;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 8px #00a6ff40;
+            backdrop-filter: blur(5px);
+            border: 1px solid cyan;
+            letter-spacing: 2px;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(95deg, #0a4c6e, #006a8f);
+            color: white;
+            text-shadow: 0 0 5px cyan;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 255, 0.4);
+            border-color: #ff66ff;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(0.2);
+        }
+        .btn-secondary {
+            background: rgba(20, 20, 50, 0.8);
+            border: 1px solid #ff6eff;
+            color: #ffabff;
+            box-shadow: 0 0 6px magenta;
+        }
+        .btn-secondary:hover {
+            background: #4a1a5e;
+            color: white;
+            border-color: cyan;
+        }
+        .error-msg {
+            color: #ff5f8f;
+            text-shadow: 0 0 4px red;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 15px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            margin-top: 16px;
+            text-align: center;
+            border-left: 4px solid #ff3366;
+            font-weight: bold;
+        }
+        /* 历史记录面板 */
+        .history-panel {
+            margin-top: 1rem;
+            border-radius: 2rem;
+            background: rgba(0, 10, 20, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 1rem;
+            border: 1px solid rgba(0, 255, 200, 0.4);
+        }
+        .history-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 0 12px 8px 12px;
+            border-bottom: 1px dashed cyan;
+            font-weight: bold;
+            color: #8deeff;
+        }
+        .guess-list {
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 6px;
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .guess-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .guess-list::-webkit-scrollbar-track {
+            background: #041a24;
+            border-radius: 10px;
+        }
+        .guess-list::-webkit-scrollbar-thumb {
+            background: cyan;
+            border-radius: 10px;
+            box-shadow: inset 0 0 6px #0ff;
+        }
+        .history-item {
+            background: linear-gradient(120deg, rgba(0, 255, 255, 0.08), rgba(0, 20, 40, 0.7));
+            border-radius: 2rem;
+            padding: 10px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Orbitron', monospace;
+            border: 0.5px solid rgba(0, 255, 200, 0.5);
+            backdrop-filter: blur(4px);
+            transition: 0.2s;
+            animation: fadeSlide 0.25s ease-out;
+        }
+        @keyframes fadeSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .history-item:hover {
+            background: rgba(0, 200, 210, 0.15);
+            border-color: cyan;
+            transform: scale(1.01);
+            box-shadow: 0 0 8px cyan;
+        }
+        .guess-num {
+            font-size: 1.5rem;
+            font-weight: bold;
+            letter-spacing: 5px;
+            background: linear-gradient(135deg, #fff, #0ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .result-badge {
+            background: #0a1f2a;
+            padding: 5px 16px;
+            border-radius: 3rem;
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #f0ff80;
+            box-shadow: 0 0 5px #ffcc33;
+            letter-spacing: 2px;
+        }
+        .flex-btns {
+            display: flex;
+            gap: 14px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .guess-count {
+            font-size: 0.75rem;
+            background: #021018;
+            padding: 3px 12px;
+            border-radius: 20px;
+            color: #0ff;
+        }
+        /* ---------- 炫酷胜利弹窗 (玻璃modal) ---------- */
+        .victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0.2s, opacity 0.3s ease;
+            font-family: 'Orbitron', monospace;
+        }
+        .victory-modal.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: rgba(10, 25, 45, 0.95);
+            border-radius: 3rem;
+            max-width: 420px;
+            width: 85%;
+            padding: 2rem 1.8rem;
+            text-align: center;
+            border: 2px solid #ffd966;
+            box-shadow: 0 0 40px rgba(255, 200, 0, 0.6), inset 0 0 15px rgba(255, 215, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+            animation: modalPop 0.4s forwards;
+        }
+        @keyframes modalPop {
+            0% {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        .modal-content h2 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #ffcc66, #ff6699);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 0.75rem;
+            letter-spacing: 2px;
+        }
+        .secret-code {
+            background: #010e1a;
+            font-size: 2.4rem;
+            font-weight: bold;
+            letter-spacing: 12px;
+            padding: 12px 0;
+            border-radius: 60px;
+            margin: 18px 0;
+            color: #ffd966;
+            text-shadow: 0 0 8px gold;
+            font-family: monospace;
+            border: 1px solid gold;
+        }
+        .attempts-glow {
+            font-size: 1.2rem;
+            background: rgba(0, 255, 255, 0.2);
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 40px;
+            margin: 12px 0;
+            color: #0ff;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            margin-top: 28px;
+        }
+        .modal-btn {
+            background: linear-gradient(145deg, #1f3a4b, #0a1a28);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 60px;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: cyan;
+            border: 1px solid cyan;
+            font-family: monospace;
+        }
+        .modal-btn-glow {
+            background: linear-gradient(145deg, #c47f1f, #ffaa33);
+            color: #0a0f1e;
+            border: none;
+            box-shadow: 0 0 15px orange;
+            font-weight: bold;
+        }
+        .modal-btn-glow:hover {
+            transform: scale(1.05);
+            background: #ffbb44;
+            box-shadow: 0 0 25px #ffaa33;
+            color: black;
+        }
+        .modal-btn:hover {
+            transform: translateY(-3px);
+            background: #2d5f7a;
+            color: white;
+            border-color: #ffaa88;
+        }
+        .close-icon {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 28px;
+            cursor: pointer;
+            color: #ccc;
+            transition: 0.2s;
+        }
+        .close-icon:hover {
+            color: #ffaa66;
+            text-shadow: 0 0 5px red;
+        }
+        @media (max-width: 560px) {
+            .game-container {
+                padding: 1rem;
+            }
+            .guess-input {
+                font-size: 1.2rem;
+                letter-spacing: 3px;
+                padding: 10px;
+            }
+            .guess-num {
+                font-size: 1.1rem;
+                letter-spacing: 2px;
+            }
+            .result-badge {
+                font-size: 1rem;
+            }
+            .glitch {
+                font-size: 1.9rem;
+            }
+            .secret-code {
+                font-size: 1.6rem;
+                letter-spacing: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="game-container" id="gameRoot">
+    <div class="cyber-header">
+        <div class="glitch">✨ NUM-BREAKER · 烟花版 ✨</div>
+        <div class="subtitle">💥 破译密码触发全屏烟花炸裂 💥</div>
+        <div class="rule-badge">
+            🧩 4位不重复数字 | 例: 0127, 5839 → xAyB
+        </div>
+    </div>
+    <div class="battle-panel">
+        <div class="input-group">
+            <input type="text" id="guessInput" class="guess-input" placeholder="????" maxlength="4" inputmode="numeric" autocomplete="off">
+            <button id="submitBtn" class="btn-primary">🚀 破译</button>
+        </div>
+        <div id="errorArea" class="error-msg" style="display: none;"></div>
+    </div>
+    <!-- 历史记录 -->
+    <div class="history-panel">
+        <div class="history-title">
+            <span>📡 破译日志</span>
+            <span class="guess-count" id="attemptCount">尝试: 0</span>
+        </div>
+        <div id="historyList" class="guess-list">
+            <div style="text-align: center; color: #5f9fbf; padding: 20px;">✨ 等待第一次破译 ✨</div>
+        </div>
+    </div>
+    <div class="flex-btns">
+        <button id="resetGameBtn" class="btn-primary btn-secondary">🔄 新对局</button>
+    </div>
+</div>
+<!-- 炫酷胜利弹窗 Modal -->
+<div id="victoryModal" class="victory-modal">
+    <div class="modal-content">
+        <span class="close-icon" id="closeModalBtn">&times;</span>
+        <h2>🎉 密码破译成功 🎉</h2>
+        <div style="font-size: 1rem; color: #bbffdd;">✨ 机密档案已解锁 ✨</div>
+        <div class="secret-code" id="modalSecretCode"></div>
+        <div class="attempts-glow" id="modalAttempts"></div>
+        <div class="modal-buttons">
+            <button id="modalResetBtn" class="modal-btn modal-btn-glow">⚡ 新的一局 ⚡</button>
+            <button id="modalCloseOnly" class="modal-btn">🔒 关闭</button>
+        </div>
+    </div>
+</div>
+<script>
+    // ------------------- 核心游戏逻辑 -------------------
+    let secretNumber = "";          // 4位无重复数字
+    let history = [];               // [{ guess, feedback }]
+    let isGameOver = false;
+    
+    // DOM 元素
+    const guessInput = document.getElementById('guessInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const resetBtn = document.getElementById('resetGameBtn');
+    const errorArea = document.getElementById('errorArea');
+    const historyListDiv = document.getElementById('historyList');
+    const attemptCountSpan = document.getElementById('attemptCount');
+    
+    // 弹窗元素
+    const victoryModal = document.getElementById('victoryModal');
+    const modalSecretCode = document.getElementById('modalSecretCode');
+    const modalAttempts = document.getElementById('modalAttempts');
+    const modalResetBtn = document.getElementById('modalResetBtn');
+    const modalCloseOnly = document.getElementById('modalCloseOnly');
+    const closeModalIcon = document.getElementById('closeModalBtn');
+    
+    // ========== 辅助函数 ==========
+    // 生成无重复4位数字 ( 0-9 不重复 )
+    function generateUniqueSecret() {
+        const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+        for (let i = digits.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [digits[i], digits[j]] = [digits[j], digits[i]];
+        }
+        return digits.slice(0, 4).join('');
+    }
+    
+    // 校验猜测: 4位纯数字，无重复
+    function isValidGuess(guess) {
+        if (typeof guess !== 'string' || guess.length !== 4) return false;
+        if (!/^\d{4}$/.test(guess)) return false;
+        const uniqueSet = new Set(guess.split(''));
+        return uniqueSet.size === 4;
+    }
+    
+    // 计算反馈 xAyB
+    function getFeedback(guess, secret) {
+        let a = 0, b = 0;
+        for (let i = 0; i < 4; i++) {
+            if (guess[i] === secret[i]) a++;
+            else if (secret.includes(guess[i])) b++;
+        }
+        return `${a}A${b}B`;
+    }
+    
+    // 渲染历史列表
+    function renderHistory() {
+        if (!historyListDiv) return;
+        if (history.length === 0) {
+            historyListDiv.innerHTML = `<div style="text-align: center; color: #5f9fbf; padding: 20px;">✨ 等待第一次破译 ✨</div>`;
+            attemptCountSpan.innerText = `尝试: 0`;
+            return;
+        }
+        let html = '';
+        const reversed = [...history].reverse();
+        for (let item of reversed) {
+            html += `
+                <div class="history-item">
+                    <span class="guess-num">🔮 ${item.guess}</span>
+                    <span class="result-badge">⚡ ${item.feedback}</span>
+                </div>
+            `;
+        }
+        historyListDiv.innerHTML = html;
+        attemptCountSpan.innerText = `尝试: ${history.length}`;
+        historyListDiv.scrollTop = historyListDiv.scrollHeight;
+    }
+    
+    // 错误显示
+    let errorTimeout = null;
+    function showError(message) {
+        if (errorTimeout) clearTimeout(errorTimeout);
+        errorArea.innerText = message;
+        errorArea.style.display = 'block';
+        errorTimeout = setTimeout(() => {
+            errorArea.style.opacity = '0';
+            setTimeout(() => {
+                if (errorArea) errorArea.style.display = 'none';
+                errorArea.style.opacity = '';
+            }, 300);
+        }, 2000);
+    }
+    function clearError() {
+        if (errorTimeout) clearTimeout(errorTimeout);
+        errorArea.style.display = 'none';
+        errorArea.innerText = '';
+    }
+    
+    // 🎆 绚丽烟花效果 (多重烟花 + 爆炸连发)
+    function fireVictoryFireworks() {
+        // 全屏烟花炸裂效果，持续2秒，多轮
+        const duration = 2000;
+        const end = Date.now() + duration;
+        const colors = ['#ff0044', '#ffaa00', '#00ffcc', '#ff66ff', '#ffee00', '#33ff99', '#ff3366'];
+        
+        // 主炮齐射
+        canvasConfetti({ particleCount: 180, spread: 100, origin: { y: 0.6 }, startVelocity: 18, colors: colors, decay: 0.9 });
+        canvasConfetti({ particleCount: 120, spread: 130, origin: { y: 0.4, x: 0.2 }, startVelocity: 20, colors: colors });
+        canvasConfetti({ particleCount: 120, spread: 130, origin: { y: 0.4, x: 0.8 }, startVelocity: 20, colors: colors });
+        canvasConfetti({ particleCount: 80, spread: 70, origin: { y: 0.7, x: 0.5 }, startVelocity: 22, colors: ['#ffaa44', '#44ffaa'] });
+        
+        // 间隔产生连续烟花雨
+        const interval = setInterval(() => {
+            if (Date.now() > end) {
+                clearInterval(interval);
+                // 最后再来一波猛烈的
+                canvasConfetti({ particleCount: 300, spread: 120, origin: { y: 0.5 }, startVelocity: 15, colors: colors });
+                canvasConfetti({ particleCount: 100, spread: 360, origin: { y: 0.3, x: 0.5 }, startVelocity: 8 });
+                return;
+            }
+            // 随机小型爆炸
+            canvasConfetti({ particleCount: 60, spread: 65, origin: { y: Math.random() * 0.7 + 0.2, x: Math.random() }, colors: colors, startVelocity: 12 });
+            canvasConfetti({ particleCount: 30, spread: 45, origin: { y: 0.8 }, angle: 60, spread: 55, startVelocity: 14 });
+        }, 220);
+        
+        // 额外 1秒后 再来一个皇冠烟花
+        setTimeout(() => {
+            canvasConfetti({ particleCount: 250, spread: 100, origin: { y: 0.5, x: 0.5 }, startVelocity: 25, colors: ['#ffcc44', '#ff77aa', '#44ddff'], scalar: 1.2 });
+        }, 400);
+    }
+    
+    // 显示胜利弹窗 + 烟花
+    function showVictoryModal(secret, attemptsCount) {
+        modalSecretCode.innerText = secret;
+        modalAttempts.innerText = `✨ 共尝试 ${attemptsCount} 次 · 完美破译 ✨`;
+        victoryModal.classList.add('active');
+        // 触发绚烂烟花效果
+        fireVictoryFireworks();
+    }
+    
+    // 关闭弹窗 (仅关闭，不重置游戏，游戏仍为胜利结束状态)
+    function closeVictoryModal() {
+        victoryModal.classList.remove('active');
+    }
+    
+    // 重置游戏逻辑 (外部调用)
+    function resetGame() {
+        // 生成全新秘密
+        secretNumber = generateUniqueSecret();
+        // 重置历史
+        history = [];
+        isGameOver = false;
+        submitBtn.disabled = false;
+        guessInput.disabled = false;
+        guessInput.value = '';
+        guessInput.focus();
+        clearError();
+        // 关闭弹窗（若有）
+        closeVictoryModal();
+        // 移除任何胜利残留样式
+        guessInput.style.boxShadow = "";
+        // 重新渲染历史
+        renderHistory();
+        // 确保秘密有效 (二次校验无重复)
+        while (new Set(secretNumber.split('')).size !== 4) {
+            secretNumber = generateUniqueSecret();
+        }
+        console.log("🕹️ 新对局开始，密码已生成(隐藏)");
+    }
+    
+    // 胜利处理 (核心)
+    function victoryProcess(guess, finalFeedback) {
+        if (isGameOver) return;
+        isGameOver = true;
+        submitBtn.disabled = true;
+        guessInput.disabled = true;
+        // 显示弹窗 + 华丽烟花 (传入密码，尝试次数)
+        showVictoryModal(secretNumber, history.length);
+        // 额外增加输入框胜利效果
+        guessInput.style.boxShadow = "0 0 25px gold, 0 0 15px orange";
+    }
+    
+    // 处理猜测主体
+    function handleGuess() {
+        if (isGameOver) {
+            showError("🏆 游戏已胜利！点击「新对局」继续挑战吧~");
+            return;
+        }
+        let rawGuess = guessInput.value.trim();
+        if (rawGuess.length !== 4) {
+            showError("❌ 请输入 4 位数字 (允许前导0，例如 0123)");
+            guessInput.value = '';
+            guessInput.focus();
+            return;
+        }
+        if (!isValidGuess(rawGuess)) {
+            showError("⚠️ 非法！需要4位不重复数字 (如 0123, 5678)");
+            guessInput.value = '';
+            guessInput.focus();
+            return;
+        }
+        clearError();
+        const feedback = getFeedback(rawGuess, secretNumber);
+        history.push({ guess: rawGuess, feedback: feedback });
+        renderHistory();
+        
+        // 胜利判定 (4A0B)
+        if (feedback === "4A0B") {
+            victoryProcess(rawGuess, feedback);
+        } else {
+            guessInput.value = '';
+            guessInput.focus();
+            // 点击微互动特效
+            submitBtn.style.transform = "scale(0.96)";
+            setTimeout(() => { if(submitBtn) submitBtn.style.transform = ""; }, 120);
+        }
+    }
+    
+    // 输入框数字过滤
+    function enforceNumericInput(e) {
+        let input = e.target;
+        let value = input.value;
+        let filtered = value.replace(/\D/g, '');
+        if (filtered.length > 4) filtered = filtered.slice(0, 4);
+        if (filtered !== value) input.value = filtered;
+    }
+    
+    function onEnterKey(e) {
+        if (e.key === 'Enter' && !isGameOver && !submitBtn.disabled) {
+            e.preventDefault();
+            handleGuess();
+        }
+    }
+    
+    // 初始化游戏
+    function initGame() {
+        secretNumber = generateUniqueSecret();
+        while (new Set(secretNumber.split('')).size !== 4) secretNumber = generateUniqueSecret();
+        history = [];
+        isGameOver = false;
+        renderHistory();
+        guessInput.value = '';
+        guessInput.disabled = false;
+        submitBtn.disabled = false;
+        guessInput.focus();
+        clearError();
+        closeVictoryModal();
+        guessInput.style.boxShadow = "";
+        
+        // 绑定事件
+        guessInput.removeEventListener('input', enforceNumericInput);
+        guessInput.removeEventListener('keypress', onEnterKey);
+        submitBtn.removeEventListener('click', handleGuess);
+        resetBtn.removeEventListener('click', resetGame);
+        
+        guessInput.addEventListener('input', enforceNumericInput);
+        guessInput.addEventListener('keypress', onEnterKey);
+        submitBtn.addEventListener('click', handleGuess);
+        resetBtn.addEventListener('click', () => resetGame());
+        
+        // 弹窗按钮事件
+        modalResetBtn.onclick = () => {
+            resetGame();
+            closeVictoryModal();
+        };
+        modalCloseOnly.onclick = () => closeVictoryModal();
+        closeModalIcon.onclick = () => closeVictoryModal();
+        // 点击模态背景关闭 (可选)
+        victoryModal.onclick = (e) => {
+            if (e.target === victoryModal) closeVictoryModal();
+        };
+    }
+    
+    // 启动游戏
+    initGame();
+    // 额外保障重置时弹窗彻底关闭
+    window.resetGameForSafety = resetGame;
+</script>
+</body>
+</html>
